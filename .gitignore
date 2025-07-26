@@ -1,0 +1,33 @@
+# === STM32CubeIDE build outputs ===
+Debug/
+Release/
+
+# === Build artifacts ===
+*.o
+*.elf
+*.bin
+*.hex
+*.map
+*.lst
+
+# === IDE-generated ===
+*.launch
+*.log
+*.d
+*.dep
+*.su
+*.a
+
+# === System files ===
+.DS_Store
+Thumbs.db
+
+# === STM32CubeIDE auto-gen folders ===
+/build/
+/Core/Inc/.mxproject
+/Drivers/CMSIS/.mxproject
+/.mxproject
+/.settings/language.settings.xml
+.cproject
+.project
+.settings/
