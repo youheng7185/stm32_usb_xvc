@@ -20,12 +20,13 @@
  *
  * in endpoint
  * first packet: send the length in binary
- * second until last packet: tdi data
+ * second until last packet: tms, tdi data
  *
  * out endpoint
  * first until last packet: tdo data
  */
 
+#define DELAY_NOP_5MHZ_TCK()  for (volatile int i = 0; i < 4; i++) __NOP() // change this for stability
 #define TDI_HIGH GPIOG->BSRR = GPIO_BSRR_BS14
 #define TDI_LOW  GPIOG->BSRR = GPIO_BSRR_BR14
 #define TCK_HIGH GPIOG->BSRR = GPIO_BSRR_BS11
@@ -58,6 +59,7 @@ void parse_receive_data(uint8_t* Buf, uint16_t Len) {
 			memset(tms_data, 0x00, 1024);
 			memset(tdi_data, 0x00, 1024);
 			memset(tdo_data, 0x00, 1024);
+			current_frame_number = 0;
 			xvc_state = RECEIVE_DATA_PACKET_TMS;
 			break;
 
@@ -85,24 +87,35 @@ void parse_receive_data(uint8_t* Buf, uint16_t Len) {
 			}
 
 			if (done_receive) {
+				TCK_LOW;
 				// bit bang jtag based on tms and tdi, also read tdo input and store
 				for (uint32_t i = 0; i < data_packet_length_bits; i++) {
-					TCK_LOW;
+
 					if (tdi_data[i / 8] & (0b1 << (i % 8)) ) {
 						TDI_HIGH;
 					} else {
 						TDI_LOW;
 					}
+
 					if (tms_data[i / 8] & (0b1 << (i % 8)) ) {
 						TMS_HIGH;
 					} else {
 						TMS_LOW;
 					}
+
 					TCK_HIGH;
+
 					tdo_data[i / 8] |= (TDO_READ << (i % 8));
+
+					DELAY_NOP_5MHZ_TCK();
+
+					TCK_LOW;
+
+					DELAY_NOP_5MHZ_TCK();
 				}
 
-				CDC_Transmit_HS(&tdo_data, data_packet_length); // send tdo back
+				while(CDC_Transmit_HS(&tdo_data, data_packet_length) == USBD_BUSY); // send tdo back
+
 				xvc_state = HEADER;
 				done_receive = false;
 			}
